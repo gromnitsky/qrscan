@@ -88,26 +88,22 @@
   }
 
   function mode(name) { // this is what you get for being a vanilla js fan
-      let elem
+      let show = q => { let e = $(q); e.style.display = 'block'; return e }
+      let hide = q => { $(q).style.display = 'none' }
+      
       switch (name) {
       case 'camera':
-          $('#result__error').style.display = 'none'
-          $('#result__text').style.display = 'none'
-          elem = $('video')
-          elem.hidden = false
-          return elem
+          hide('#result__error')
+          hide('#result__text')
+          return show('video')
       case 'text':
-          $('#result__error').style.display = 'none'
-          $('video').hidden = true
-          elem = $('#result__text')
-          elem.style.display = 'block'
-          return elem
+          hide('#result__error')
+          hide('video')
+          return show('#result__text')
       default: // error
-          $('#result__text').style.display = 'none'
-          $('video').hidden = true
-          elem = $('#result__error')
-          elem.style.display = 'block'
-          return elem
+          hide('#result__text')
+          hide('video')
+          return show('#result__error')
       }
   }
 
@@ -123,14 +119,13 @@
               log('error', 'Initializing the camera...')
               this.capture().then( () => {
                   mode('camera')
-                  this.video.hidden = false
               }).catch( e => {
                   log('error', e)
               })
           } else {
               this.stream.getTracks().forEach(track => track.stop())
               delete this.stream
-              this.video.hidden = true
+              log('error', '')
           }
       }
 
