@@ -1,0 +1,178 @@
+<!doctype html>
+<title>QR Scan</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @media (min-width: 601px) {
+    body {
+      width: 600px;
+      margin: 8px auto;
+    }
+  }
+  html {
+    height: 100%;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 16px);
+  }
+  fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  #result {
+    border: 1px solid gray;
+    flex-grow: 1;
+    margin-top: 8px;
+    
+    display: flex;
+    flex-direction: column;
+    height: 50%;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+  }
+  #result__error {
+    padding: 1em;
+  }
+  #result__text {
+    flex-grow: 1;
+  }
+</style>
+
+<form>
+  <fieldset disabled>
+    <input type="submit" value="Toggle Camera">
+    <input type="checkbox" id="find_urls" checked>
+    <label for="find_urls">
+      Scan for URLs & automatically open them in new tabs
+    </label>
+  </fieldset>
+</form>
+
+<div id="result">
+  <div id="result__error"></div>
+  <textarea id="result__text" readonly spellcheck="false"></textarea>
+  <video></video>
+  <canvas hidden></canvas>
+</div>
+
+<script src="node_modules/jsqr/dist/jsQR.js"></script>
+<script type="module">
+  document.addEventListener('DOMContentLoaded', main)
+
+  function main() {
+      let beep = mkbeep()
+      
+      let camera = new Camera($('canvas'))
+      camera.on_scan = code => {
+          let textarea = mode('text')
+          textarea.innerText = code.data
+          beep()
+      }
+      
+      $('form fieldset').disabled = false
+      $('form').onsubmit = (evt) => {
+          evt.preventDefault()
+          camera.toggle()
+      }
+  }
+
+  function mkbeep() {
+      let audio = new Audio('beep.mp3')
+      return () => audio.play()
+  }
+
+  function mode(name) { // this is what you get for being a vanilla js fan
+      let elem
+      switch (name) {
+      case 'camera':
+          $('#result__error').style.display = 'none'
+          $('#result__text').style.display = 'none'
+          elem = $('video')
+          elem.hidden = false
+          return elem
+      case 'text':
+          $('#result__error').style.display = 'none'
+          $('video').hidden = true
+          elem = $('#result__text')
+          elem.style.display = 'block'
+          return elem
+      default: // error
+          $('#result__text').style.display = 'none'
+          $('video').hidden = true
+          elem = $('#result__error')
+          elem.style.display = 'block'
+          return elem
+      }
+  }
+
+  class Camera {
+      constructor(canvas_node) {
+          this.video = mode('camera')
+          this.canvas_node = canvas_node
+          this.canvas = this.canvas_node.getContext("2d")
+      }
+
+      toggle() {
+          if (!this.stream) {
+              log('error', 'Initializing the camera...')
+              this.capture().then( () => {
+                  mode('camera')
+                  this.video.hidden = false
+              }).catch( e => {
+                  log('error', e)
+              })
+          } else {
+              this.stream.getTracks().forEach(track => track.stop())
+              delete this.stream
+              this.video.hidden = true
+          }
+      }
+
+      capture() {
+          let cap = {video: {facingMode: "environment"}} // rear camera
+          return navigator.mediaDevices.getUserMedia(cap).then( r => {
+              this.video.srcObject = r
+              this.video.setAttribute("playsinline", true)
+              this.video.play()
+              this.stream = r
+              requestAnimationFrame(this.tick.bind(this))
+          })
+      }
+
+      tick() {
+          if (!this.stream) {
+              console.log('requestAnimationFrame: user interrupt')
+              return
+          }
+
+          if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+              let width = this.video.videoWidth
+              let height = this.video.videoHeight
+              this.canvas_node.width = width
+              this.canvas_node.height = height
+
+              this.canvas.drawImage(this.video, 0, 0, width, height)
+              let idata = this.canvas.getImageData(0, 0, width, height)
+              let code = jsQR(idata.data, idata.width, idata.height,
+                              { inversionAttempts: "dontInvert" })
+              if (code && code.data) {
+                  this.toggle()
+                  console.log('requestAnimationFrame: qr is scanned')
+                  if (this.on_scan) setTimeout(this.on_scan(code), 1)
+                  return
+              }
+          }
+
+          requestAnimationFrame(this.tick.bind(this))
+      }
+  }
+  
+  function log(type, msg) { mode(type).innerText = msg }
+  function $(q) { return document.querySelector(q) }
+</script>
