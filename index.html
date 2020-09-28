@@ -4,9 +4,9 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  @media (min-width: 601px) {
+  @media (min-width: 701px) {
     body {
-      width: 600px;
+      width: 700px;
       margin: 8px auto;
     }
   }
@@ -27,7 +27,7 @@
     border: 1px solid gray;
     flex-grow: 1;
     margin-top: 8px;
-    
+
     display: flex;
     flex-direction: column;
     height: 50%;
@@ -36,7 +36,7 @@
     width: 100%;
     height: 100%;
   }
-  #result__error {
+  #result__error, #result__help {
     padding: 1em;
   }
   #result__text {
@@ -55,9 +55,24 @@
 </form>
 
 <div id="result">
+  <div id="result__help">
+    <p>To scan a QR code:</p>
+    <ol>
+      <li>Click <b>Toggle Camera</b> button.</li>
+      <li>
+        Show the QR code to your camera. If a scan is successful,
+        the camera stream is replaced w/ a decoded text.
+      </li>
+    </ol>
+    <p>
+      To save CPU resources, either click <b>Toggle Camera</b>
+        button again or switch to another browser tab.</li>
+    </p>
+    <p>See <a href='https://github.com/gromnitsky/qrscan'>https://github.com/gromnitsky/qrscan</a> for more info.</p>
+  </div>
   <div id="result__error"></div>
   <textarea id="result__text" readonly spellcheck="false"></textarea>
-  <video></video>
+  <video id="result__video"></video>
   <canvas hidden></canvas>
 </div>
 
@@ -67,14 +82,14 @@
 
   function main() {
       let beep = mkbeep()
-      
-      let camera = new Camera($('canvas'))
+      mode('help')
+
+      let camera = new Camera($('#result__video'), $('canvas'))
       camera.on_scan = code => {
-          let textarea = mode('text')
-          textarea.innerText = code.data
+          log('text', code.data)
           beep()
       }
-      
+
       $('form fieldset').disabled = false
       $('form').onsubmit = (evt) => {
           evt.preventDefault()
@@ -87,29 +102,18 @@
       return () => audio.play()
   }
 
-  function mode(name) { // this is what you get for being a vanilla js fan
+  function mode(name) {
       let show = q => { let e = $(q); e.style.display = 'block'; return e }
-      let hide = q => { $(q).style.display = 'none' }
-      
-      switch (name) {
-      case 'camera':
-          hide('#result__error')
-          hide('#result__text')
-          return show('video')
-      case 'text':
-          hide('#result__error')
-          hide('video')
-          return show('#result__text')
-      default: // error
-          hide('#result__text')
-          hide('video')
-          return show('#result__error')
-      }
+
+      ;['help', 'error', 'text', 'video'].map( v => {
+          $(`#result__${v}`).style.display = 'none'
+      })
+      return show(`#result__${name}`)
   }
 
   class Camera {
-      constructor(canvas_node) {
-          this.video = mode('camera')
+      constructor(video_node, canvas_node) {
+          this.video = video_node
           this.canvas_node = canvas_node
           this.canvas = this.canvas_node.getContext("2d")
       }
@@ -118,18 +122,20 @@
           if (!this.stream) {
               log('error', 'Initializing the camera...')
               this.capture().then( () => {
-                  mode('camera')
+                  mode('video')
               }).catch( e => {
-                  log('error', e)
+                  log('error', `Cannot capture a camera: ${e}`)
               })
           } else {
               this.stream.getTracks().forEach(track => track.stop())
               delete this.stream
-              log('error', '')
+              mode('help')
           }
       }
 
       capture() {
+          if (!navigator.mediaDevices)
+              return Promise.reject("insecure context?")
           let cap = {video: {facingMode: "environment"}} // rear camera
           return navigator.mediaDevices.getUserMedia(cap).then( r => {
               this.video.srcObject = r
@@ -167,7 +173,7 @@
           requestAnimationFrame(this.tick.bind(this))
       }
   }
-  
+
   function log(type, msg) { mode(type).innerText = msg }
   function $(q) { return document.querySelector(q) }
 </script>
