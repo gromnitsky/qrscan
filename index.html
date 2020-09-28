@@ -10,19 +10,23 @@
       margin: 8px auto;
     }
   }
+
   html {
     height: 100%;
   }
+
   body {
     display: flex;
     flex-direction: column;
     height: calc(100% - 16px);
   }
+
   fieldset {
     margin: 0;
     padding: 0;
     border: 0;
   }
+
   #result {
     border: 1px solid gray;
     flex-grow: 1;
@@ -32,13 +36,17 @@
     flex-direction: column;
     height: 50%;
   }
+
   video {
     width: 100%;
     height: 100%;
   }
-  #result__error, #result__help {
+
+  #result__error,
+  #result__help {
     padding: 1em;
   }
+
   #result__text {
     flex-grow: 1;
   }
@@ -78,6 +86,7 @@
 
 <script src="node_modules/jsqr/dist/jsQR.js"></script>
 <script type="module">
+  /* global jsQR */
   document.addEventListener('DOMContentLoaded', main)
 
   function main() {
