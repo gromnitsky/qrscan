@@ -73,8 +73,7 @@
       </li>
     </ol>
     <p>
-      To save CPU resources, either click <b>Toggle Camera</b>
-        button again or switch to another browser tab.</li>
+      To open URLs automatically you need to allow popups for this domain.
     </p>
     <p>See <a href='https://github.com/gromnitsky/qrscan'>https://github.com/gromnitsky/qrscan</a> for more info.</p>
   </div>
@@ -90,13 +89,17 @@
   document.addEventListener('DOMContentLoaded', main)
 
   function main() {
-      let beep = mkbeep()
       mode('help')
+      let beep = mkbeep()
 
       let camera = new Camera($('#result__video'), $('canvas'))
       camera.on_scan = code => {
           log('text', code.data)
           beep()
+
+          let u = urls(code.data)
+          if (u.length && $('#find_urls').checked)
+              u.forEach( v => window.open(v, '_blank'))
       }
 
       $('form fieldset').disabled = false
@@ -181,6 +184,11 @@
 
           requestAnimationFrame(this.tick.bind(this))
       }
+  }
+
+  function urls(text) {
+      return text.split(/[<>\s]/).filter( v => /^https?:\/\/..../.test(v)).
+          slice(0, 3)
   }
 
   function log(type, msg) { mode(type).innerText = msg }
