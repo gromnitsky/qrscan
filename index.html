@@ -108,6 +108,12 @@
           evt.preventDefault()
           camera.toggle()
       }
+
+      $('#find_urls').onchange = evt => {
+          localStorage.setItem('qrscan.find_urls', evt.target.checked)
+      }
+      let find_urls = localStorage.getItem('qrscan.find_urls')
+      $('#find_urls').checked = !(find_urls && find_urls === "false")
   }
 
   function mkbeep() {
