@@ -108,6 +108,7 @@
           evt.preventDefault()
           camera.toggle()
       }
+      camera.video.onclick = camera.toggle.bind(camera)
 
       $('#find_urls').onchange = evt => {
           localStorage.setItem('qrscan.find_urls', evt.target.checked)
